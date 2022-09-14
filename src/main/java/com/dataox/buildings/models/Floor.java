@@ -9,9 +9,11 @@ import java.util.List;
 public class Floor {
     private final List<People> floorPeoples;
     private List<People> releasedPeople;
+    private int numberOfFloor;
 
-    public Floor(List<People> floorPeoples) {
+    public Floor(List<People> floorPeoples, int numberOfFloor) {
         this.floorPeoples = floorPeoples;
+        this.numberOfFloor = numberOfFloor;
         this.releasedPeople = new ArrayList<>();
     }
 

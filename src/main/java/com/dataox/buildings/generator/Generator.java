@@ -13,9 +13,9 @@ public interface Generator<T> {
     default int random(int min, int max, int exc) {
         max -= min;
         int a;
-        while(true){
+        while (true) {
             a = (int) (Math.random() * max) + min;
-            if (a != exc){
+            if (a != exc) {
                 break;
             }
         }

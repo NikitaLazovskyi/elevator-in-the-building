@@ -1,7 +1,7 @@
 package com.dataox.buildings.models;
 
+import com.dataox.buildings.exception.NoFloorsWithPeopleException;
 import com.dataox.buildings.generator.impl.GeneratorFloor;
-import com.dataox.buildings.generator.impl.GeneratorPeople;
 import lombok.Data;
 
 import java.util.ArrayDeque;
@@ -61,16 +61,17 @@ public class Building {
             movingUp = true;
             currentFloor = 0;
             print();
-            while (true) {
-                checkDestinationFloor();
-                checkDirection();
-                throwOutPeoples();
-                populateElevator();
-                move();
-                if (building.allPeoples == 0 && elevatorsPeoples.size() == 0) {
-                    break;
+            try {
+                while (true) {
+                    checkDestinationFloor();
+                    checkDirection();
+                    throwOutPeoples();
+                    populateElevator();
+                    move();
+                    print();
                 }
-                print();
+            } catch (NoFloorsWithPeopleException e) {
+                System.out.println(e.getMessage());
             }
         }
 
@@ -83,9 +84,20 @@ public class Building {
                     iterator.remove();
                 }
             }
+            checkDirection();
+            checkDestinationFloor();
         }
 
         private void move() {
+            if (elevatorsPeoples.size() == 0 && building.floors.get(currentFloor).getFloorPeoples().size() == 0) {
+                int numberOfFloor = building.floors.stream().filter(
+                        floor -> floor.getFloorPeoples().size() > 0).findAny().orElseThrow(
+                        () -> new NoFloorsWithPeopleException("All peoples were delivered")
+                ).getNumberOfFloor();
+                movingUp = numberOfFloor > currentFloor;
+                destinationElevatorFloor = numberOfFloor;
+                checkDirection();
+            }
             if (movingUp) {
                 currentFloor++;
             } else {
@@ -94,6 +106,7 @@ public class Building {
         }
 
         private void checkDirection() {
+            movingUp = destinationElevatorFloor > currentFloor;
             if (currentFloor == building.floors.size() - 1) {
                 movingUp = false;
             } else if (currentFloor == 0) {
@@ -102,11 +115,7 @@ public class Building {
         }
 
         private void checkDestinationFloor() {
-            if (elevatorsPeoples.size() == 0) {
-                isReachedDestination = true;
-            } else {
-                isReachedDestination = false;
-            }
+            isReachedDestination = elevatorsPeoples.size() == 0;
 
         }
 
@@ -125,18 +134,22 @@ public class Building {
                             || !movingUp && people.getDestinationFloor() < currentFloor && hasFreeSpace()
                             || isReachedDestination) {
                         iterator.remove();
-                        elevatorsPeoples.add(people);
                         building.allPeoples--;
+                        elevatorsPeoples.add(people);
+                        movingUp = people.getDestinationFloor() > currentFloor;
 
-                        if (movingUp && people.getDestinationFloor() > destinationElevatorFloor
-                                || !movingUp && people.getDestinationFloor() < destinationElevatorFloor) {
-                            destinationElevatorFloor = people.getDestinationFloor();
-                            isReachedDestination = false;
+                        Integer temp;
+                        if (movingUp) {
+                            temp = elevatorsPeoples.stream().mapToInt(People::getDestinationFloor)
+                                    .boxed().max(Integer::compare).orElse(null);
+                        } else {
+                            temp = elevatorsPeoples.stream().mapToInt(People::getDestinationFloor)
+                                    .boxed().min(Integer::compare).orElse(null);
                         }
-
-                        if (isReachedDestination) {
-                            movingUp = currentFloor < destinationElevatorFloor;
+                        if (temp != null) {
+                            destinationElevatorFloor = temp;
                         }
+                        isReachedDestination = false;
                     }
 
                 }
@@ -151,7 +164,7 @@ public class Building {
             System.out.printf("\n\n%51sSTEP %d\n", " ", building.illustrateCounter);
             int maximumPeoples = 10;
             StringBuilder sb = new StringBuilder();
-            sb.append(String.format("%42s|%8s%4s%8s|\n", "", "________", "roof", "________"));
+            sb.append(String.format("%42s|%9s%4s%9s|\n", "", "________", "roof", "________"));
             for (int floorNumber = building.floors.size() - 1; floorNumber >= 0; floorNumber--) {
                 List<People> floorPeoples = building.floors.get(floorNumber).getFloorPeoples();
                 IntStream.range(0, maximumPeoples - floorPeoples.size()).forEach(x -> sb.append("    "));
@@ -159,14 +172,24 @@ public class Building {
                 sb.append("->");
                 if (currentFloor == floorNumber) {
                     sb.append("|");
+                    if (movingUp) {
+                        sb.append("↑");
+                    }else{
+                        sb.append("↓");
+                    }
                     elevatorsPeoples.forEach(people -> {
                         sb.append(String.format("[%2d]", people.getDestinationFloor()));
                     });
                     IntStream.range(0, maximumCapacity - elevatorsPeoples.size()).forEach(
                             x -> sb.append(String.format("[%2s]", " ")));
+                    if (movingUp) {
+                        sb.append("↑");
+                    }else{
+                        sb.append("↓");
+                    }
                     sb.append("|");
                 } else {
-                    sb.append(String.format("|%20s|", " "));
+                    sb.append(String.format("|%22s|", " "));
                 }
                 sb.append(String.format("%2d", floorNumber));
                 sb.append("|->");
