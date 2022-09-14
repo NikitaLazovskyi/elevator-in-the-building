@@ -7,7 +7,6 @@ import java.util.List;
 
 @Data
 public class Floor {
-    // 5 >= x <= 20
     private final List<People> floorPeoples;
     private List<People> releasedPeople;
 

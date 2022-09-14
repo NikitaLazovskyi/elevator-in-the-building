@@ -6,22 +6,22 @@ import com.dataox.buildings.models.People;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
 @Data
 public class GeneratorFloor implements Generator<Floor> {
 
-    //5 <= n <= 20
-    private int maxPeoples = 3;
+    //0 <= x < 10
+    private int maxPeoples = 10;
     private int minPeoples = 0;
+
     @Override
     public List<Floor> generate(int min, int max) {
         int floors = this.random(min, max);
         List<Floor> res = new ArrayList<>();
-        IntStream.range(0, floors).forEach(x -> res.add(
-                new Floor(new GeneratorPeople(floors, x).generate(minPeoples, maxPeoples)))
-        );
+        IntStream.range(0, floors).forEach(x -> res.add(new Floor(new GeneratorPeople(floors, x).generate(minPeoples, maxPeoples))));
         return res;
     }
 }

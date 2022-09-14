@@ -11,24 +11,22 @@ import java.util.stream.IntStream;
 
 @Data
 public class Building {
-    // 5 >= x <= 20
+
+    // 5 <= x < 20
+    private final int floorsMax = 20;
+    private final int floorsMin = 5;
     private List<Floor> floors;
     private Elevator elevator;
     private GeneratorFloor generatorFloor;
-    private GeneratorPeople generatorPeople;
     private int allPeoples;
     private int illustrateCounter;
 
     public Building(boolean generate) {
         if (generate) {
             generatorFloor = new GeneratorFloor();
-            // 5 20
-//            floors = generatorFloor.generate(5, 20);
-            floors = generatorFloor.generate(6, 6);
+            floors = generatorFloor.generate(floorsMin, floorsMax);
             elevator = new Elevator(this);
-            allPeoples = (int) floors.stream().mapToLong(floor ->
-                    floor.getFloorPeoples().size()
-            ).sum();
+            allPeoples = floors.stream().mapToInt(floor -> floor.getFloorPeoples().size()).sum();
         } else {
             elevator = new Elevator(this);
         }
@@ -36,9 +34,7 @@ public class Building {
 
     public void setFloors(List<Floor> floors) {
         this.floors = floors;
-        allPeoples = (int) floors.stream().mapToLong(floor ->
-                floor.getFloorPeoples().size()
-        ).sum();
+        allPeoples = floors.stream().mapToInt(floor -> floor.getFloorPeoples().size()).sum();
     }
 
     @Data
@@ -50,6 +46,7 @@ public class Building {
         private int destinationElevatorFloor = 0;
 
         private boolean movingUp;
+        private boolean isReachedDestination;
 
         private int currentFloor;
 
@@ -63,12 +60,17 @@ public class Building {
         public void start() {
             movingUp = true;
             currentFloor = 0;
-            for (int i = 0; i < 100; i++) {
-                print();
+            print();
+            while (true) {
+                checkDestinationFloor();
                 checkDirection();
                 throwOutPeoples();
                 populateElevator();
                 move();
+                if (building.allPeoples == 0 && elevatorsPeoples.size() == 0) {
+                    break;
+                }
+                print();
             }
         }
 
@@ -99,22 +101,44 @@ public class Building {
             }
         }
 
+        private void checkDestinationFloor() {
+            if (elevatorsPeoples.size() == 0) {
+                isReachedDestination = true;
+            } else {
+                isReachedDestination = false;
+            }
+
+        }
+
         private void populateElevator() {
             checkDirection();
             List<People> floorPeoples = building.floors.get(currentFloor).getFloorPeoples();
             if (hasFreeSpace() && building.floors.get(currentFloor).getFloorPeoples().size() > 0) {
                 for (Iterator<People> iterator = floorPeoples.iterator(); iterator.hasNext(); ) {
                     People people = iterator.next();
-                    if (movingUp && people.getDestinationFloor() > currentFloor && hasFreeSpace() ||
-                            !movingUp && people.getDestinationFloor() < currentFloor && hasFreeSpace()) {
+                    if (elevatorsPeoples.size() > 0
+                            && ((elevatorsPeoples.getFirst().getDestinationFloor() > currentFloor && people.getDestinationFloor() < currentFloor)
+                            || (elevatorsPeoples.getFirst().getDestinationFloor() < currentFloor && people.getDestinationFloor() > currentFloor))) {
+                        continue;
+                    }
+                    if (movingUp && people.getDestinationFloor() > currentFloor && hasFreeSpace()
+                            || !movingUp && people.getDestinationFloor() < currentFloor && hasFreeSpace()
+                            || isReachedDestination) {
                         iterator.remove();
                         elevatorsPeoples.add(people);
+                        building.allPeoples--;
 
-//                        if (movingUp && people.getDestinationFloor() > destinationElevatorFloor ||
-//                                !movingUp && people.getDestinationFloor() < destinationElevatorFloor) {
-//                            destinationElevatorFloor = people.getDestinationFloor();
-//                        }
+                        if (movingUp && people.getDestinationFloor() > destinationElevatorFloor
+                                || !movingUp && people.getDestinationFloor() < destinationElevatorFloor) {
+                            destinationElevatorFloor = people.getDestinationFloor();
+                            isReachedDestination = false;
+                        }
+
+                        if (isReachedDestination) {
+                            movingUp = currentFloor < destinationElevatorFloor;
+                        }
                     }
+
                 }
             }
         }
@@ -129,24 +153,24 @@ public class Building {
             StringBuilder sb = new StringBuilder();
             sb.append(String.format("%42s|%8s%4s%8s|\n", "", "________", "roof", "________"));
             for (int floorNumber = building.floors.size() - 1; floorNumber >= 0; floorNumber--) {
-                IntStream.range(0, maximumPeoples - building.floors.get(floorNumber).getFloorPeoples().size()).forEach(
-                        x -> sb.append("    "));
-                building.floors.get(floorNumber).getFloorPeoples().forEach(
-                        people -> sb.append(String.format(" %2d ", people.getDestinationFloor())));
+                List<People> floorPeoples = building.floors.get(floorNumber).getFloorPeoples();
+                IntStream.range(0, maximumPeoples - floorPeoples.size()).forEach(x -> sb.append("    "));
+                floorPeoples.forEach(people -> sb.append(String.format(" %2d ", people.getDestinationFloor())));
                 sb.append("->");
                 if (currentFloor == floorNumber) {
                     sb.append("|");
                     elevatorsPeoples.forEach(people -> {
                         sb.append(String.format("[%2d]", people.getDestinationFloor()));
                     });
-                    IntStream.range(0, maximumCapacity - elevatorsPeoples.size()).forEach(x -> sb.append(String.format("[%2s]", " ")));
+                    IntStream.range(0, maximumCapacity - elevatorsPeoples.size()).forEach(
+                            x -> sb.append(String.format("[%2s]", " ")));
                     sb.append("|");
                 } else {
                     sb.append(String.format("|%20s|", " "));
                 }
-                sb.append(floorNumber);
+                sb.append(String.format("%2d", floorNumber));
                 sb.append("|->");
-                building.floors.get(floorNumber).getReleasedPeople().forEach(people ->{
+                building.floors.get(floorNumber).getReleasedPeople().forEach(people -> {
                     sb.append(String.format(" %2d ", people.getDestinationFloor()));
                 });
                 sb.append("\n");
