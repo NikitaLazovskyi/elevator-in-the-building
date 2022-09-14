@@ -13,7 +13,7 @@ import java.util.stream.IntStream;
 public class GeneratorFloor implements Generator<Floor> {
 
     //5 <= n <= 20
-    private int maxPeoples = 10;
+    private int maxPeoples = 3;
     private int minPeoples = 0;
     @Override
     public List<Floor> generate(int min, int max) {

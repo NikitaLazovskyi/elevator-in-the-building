@@ -23,8 +23,8 @@ public class Building {
         if (generate) {
             generatorFloor = new GeneratorFloor();
             // 5 20
-            floors = generatorFloor.generate(5, 20);
-//            floors = generatorFloor.generate(6, 6);
+//            floors = generatorFloor.generate(5, 20);
+            floors = generatorFloor.generate(6, 6);
             elevator = new Elevator(this);
             allPeoples = (int) floors.stream().mapToLong(floor ->
                     floor.getFloorPeoples().size()
@@ -77,6 +77,7 @@ public class Building {
             while (iterator.hasNext()) {
                 People people = iterator.next();
                 if (people.getDestinationFloor() == currentFloor) {
+                    building.floors.get(currentFloor).getReleasedPeople().add(people);
                     iterator.remove();
                 }
             }
@@ -123,16 +124,16 @@ public class Building {
         }
 
         private void print() {
-            System.out.printf("\n\n%52sSTEP %d\n", " ", building.illustrateCounter);
+            System.out.printf("\n\n%51sSTEP %d\n", " ", building.illustrateCounter);
             int maximumPeoples = 10;
             StringBuilder sb = new StringBuilder();
-            sb.append(String.format("%43s|%8s%4s%8s|\n", "", "________", "roof", "________"));
+            sb.append(String.format("%42s|%8s%4s%8s|\n", "", "________", "roof", "________"));
             for (int floorNumber = building.floors.size() - 1; floorNumber >= 0; floorNumber--) {
                 IntStream.range(0, maximumPeoples - building.floors.get(floorNumber).getFloorPeoples().size()).forEach(
                         x -> sb.append("    "));
                 building.floors.get(floorNumber).getFloorPeoples().forEach(
-                        people -> sb.append(String.format("[%2d]", people.getDestinationFloor())));
-                sb.append("-->");
+                        people -> sb.append(String.format(" %2d ", people.getDestinationFloor())));
+                sb.append("->");
                 if (currentFloor == floorNumber) {
                     sb.append("|");
                     elevatorsPeoples.forEach(people -> {
@@ -144,6 +145,10 @@ public class Building {
                     sb.append(String.format("|%20s|", " "));
                 }
                 sb.append(floorNumber);
+                sb.append("|->");
+                building.floors.get(floorNumber).getReleasedPeople().forEach(people ->{
+                    sb.append(String.format(" %2d ", people.getDestinationFloor()));
+                });
                 sb.append("\n");
             }
             System.out.println(sb);

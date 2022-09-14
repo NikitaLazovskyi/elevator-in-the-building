@@ -1,15 +1,20 @@
 package com.dataox.buildings.models;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@AllArgsConstructor
 public class Floor {
     // 5 >= x <= 20
-    private List<People> floorPeoples;
+    private final List<People> floorPeoples;
+    private List<People> releasedPeople;
+
+    public Floor(List<People> floorPeoples) {
+        this.floorPeoples = floorPeoples;
+        this.releasedPeople = new ArrayList<>();
+    }
 
     @Override
     public String toString() {
