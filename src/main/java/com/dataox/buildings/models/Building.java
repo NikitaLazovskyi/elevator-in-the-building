@@ -1,12 +1,12 @@
 package com.dataox.buildings.models;
 
-import com.dataox.buildings.exception.NoFloorsWithPeopleException;
 import com.dataox.buildings.generator.impl.GeneratorFloor;
 import lombok.Data;
 
 import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Data
@@ -61,17 +61,16 @@ public class Building {
             movingUp = true;
             currentFloor = 0;
             print();
-            try {
-                while (true) {
-                    checkDestinationFloor();
-                    checkDirection();
-                    throwOutPeoples();
-                    populateElevator();
-                    move();
-                    print();
+            while (true) {
+                checkDestinationFloor();
+                checkDirection();
+                throwOutPeoples();
+                populateElevator();
+                move();
+                print();
+                if (building.allPeoples == 0 && elevatorsPeoples.size() == 0) {
+                    break;
                 }
-            } catch (NoFloorsWithPeopleException e) {
-                System.out.println(e.getMessage());
             }
         }
 
@@ -90,13 +89,19 @@ public class Building {
 
         private void move() {
             if (elevatorsPeoples.size() == 0 && building.floors.get(currentFloor).getFloorPeoples().size() == 0) {
-                int numberOfFloor = building.floors.stream().filter(
-                        floor -> floor.getFloorPeoples().size() > 0).findAny().orElseThrow(
-                        () -> new NoFloorsWithPeopleException("All peoples were delivered")
-                ).getNumberOfFloor();
+                List<Integer> collect = building.floors.stream().filter(
+                                floor -> floor.getFloorPeoples().size() > 0).mapToInt(Floor::getNumberOfFloor)
+                        .boxed().collect(Collectors.toList());
+                Integer numberOfFloor = building.floors.size();
+                for (int i = 0; i < collect.size(); i++) {
+                    if (Math.abs(collect.get(i) - currentFloor) < numberOfFloor) {
+                        numberOfFloor = collect.get(i);
+                    }
+                }
                 movingUp = numberOfFloor > currentFloor;
                 destinationElevatorFloor = numberOfFloor;
                 checkDirection();
+                checkDestinationFloor();
             }
             if (movingUp) {
                 currentFloor++;
@@ -174,7 +179,7 @@ public class Building {
                     sb.append("|");
                     if (movingUp) {
                         sb.append("↑");
-                    }else{
+                    } else {
                         sb.append("↓");
                     }
                     elevatorsPeoples.forEach(people -> {
@@ -184,7 +189,7 @@ public class Building {
                             x -> sb.append(String.format("[%2s]", " ")));
                     if (movingUp) {
                         sb.append("↑");
-                    }else{
+                    } else {
                         sb.append("↓");
                     }
                     sb.append("|");
